@@ -40,7 +40,7 @@ def vector_to_face(x, y, z):
             face = 'back'
     return face
 
-def convert_cube_to_equirectangular(input_folder, output_path, width=4096, height=2048):
+def convert_cube_to_equirectangular(input_folder, output_path, width=1024, height=512):
     faces = load_face_images(input_folder)
 
     output = np.zeros((height, width, 3), dtype=np.uint8)

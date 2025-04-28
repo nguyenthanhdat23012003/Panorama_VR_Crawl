@@ -2,14 +2,12 @@ import os
 from PIL import Image
 
 def stitch_face(face_folder, face_short_name):
-    # Detect level folders (l1, l2, l3...)
     levels = [d for d in os.listdir(face_folder) if os.path.isdir(os.path.join(face_folder, d))]
     if not levels:
         raise ValueError(f"No level folders found in {face_folder}")
-    
-    # Sort levels to pick the highest one (l3 > l2 > l1)
+
     levels.sort()
-    highest_level = levels[-1]  # ví dụ l3
+    highest_level = levels[-1]
 
     level_path = os.path.join(face_folder, highest_level)
 
@@ -43,8 +41,29 @@ def stitch_face(face_folder, face_short_name):
     face_image.save(output_name)
     print(f"Saved {output_name}")
 
+def rotate_faces():
+    u_img = Image.open('./cube_faces/u.jpg')
+    u_img = u_img.rotate(-180, expand=True)
+    u_img.save('./cube_faces/u.jpg')
+
+    d_img = Image.open('./cube_faces/d.jpg')
+    d_img = d_img.rotate(180, expand=True)
+    d_img.save('./cube_faces/d.jpg')
+
+def flip_faces():
+    u_img = Image.open('./cube_faces/u.jpg')
+    u_img = u_img.transpose(Image.FLIP_LEFT_RIGHT)
+    u_img.save('./cube_faces/u.jpg')
+
+    d_img = Image.open('./cube_faces/d.jpg')
+    d_img = d_img.transpose(Image.FLIP_LEFT_RIGHT)
+    d_img.save('./cube_faces/d.jpg')
+
 if __name__ == "__main__":
     faces = ['l', 'r', 'f', 'b', 'u', 'd']
     for face in faces:
         folder = os.path.join('./tiles', face)
         stitch_face(folder, face)
+
+    rotate_faces()
+    flip_faces()

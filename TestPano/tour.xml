@@ -1,0 +1,14 @@
+<krpano onstart="loadscene(scene1);">
+  <scene name="scene1">
+    <view hlookat="0" vlookat="0" fov="90" fovmin="60" fovmax="90" />
+    <image multires="true" tilesize="512">
+      <level tiledimagewidth="2560" tiledimageheight="2560">
+        <cube url="tiles/%s/l3/%v/l3_%s_%v_%h.jpg"/>
+      </level>
+      <level tiledimagewidth="1536" tiledimageheight="1536">
+        <cube url="tiles/%s/l2/%v/l2_%s_%v_%h.jpg"/>
+      </level>
+      <!-- l1 REMOVED -->
+    </image>
+  </scene>
+</krpano>

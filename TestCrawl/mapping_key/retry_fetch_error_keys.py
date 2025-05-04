@@ -5,10 +5,19 @@ import os
 
 ERROR_FILE = "error_fetch_image_key.txt"
 OUTPUT_FILE = "product-mapping-image-key.txt"
-TEMP_FILE = "temp_error.txt"
-MAX_CONCURRENT = 20
-MAX_RETRY = 5
+MAX_CONCURRENT = 10
+MAX_RETRY = 3
 CDN_PATTERN = re.compile(r"https?://imgscdn\.ajun720\.cn/(\d+/works/[a-zA-Z0-9]+)")
+
+def remove_key_from_error_file(key):
+    if not os.path.exists(ERROR_FILE):
+        return
+    with open(ERROR_FILE, "r") as f:
+        lines = f.readlines()
+    with open(ERROR_FILE, "w") as f:
+        for line in lines:
+            if line.strip() != key:
+                f.write(line)
 
 async def fetch_and_handle(context, key, sema, lock):
     tour_url = f"http://www.ajun720.cn/tour/{key}"
@@ -28,6 +37,7 @@ async def fetch_and_handle(context, key, sema, lock):
             page.on("request", handle_request)
 
             try:
+                print(f"🌐 Đang truy cập {tour_url}...")
                 await page.goto(tour_url, timeout=60000)
                 await page.wait_for_timeout(8000)
             except Exception as e:
@@ -41,6 +51,7 @@ async def fetch_and_handle(context, key, sema, lock):
                 async with lock:
                     with open(OUTPUT_FILE, "a") as out:
                         out.write(f"{key},{cdn_path}\n")
+                    remove_key_from_error_file(key)
                 return True
 
         print(f"❌ Không tìm thấy CDN cho {key}")
@@ -68,22 +79,7 @@ async def retry_errors():
 
             print(f"🚀 Đang retry {len(keys)} key lỗi...")
 
-            remaining = []
-
-            async def handle_key(key):
-                success = await fetch_and_handle(context, key, sema, lock)
-                if not success:
-                    remaining.append(key)
-
-            await asyncio.gather(*(handle_key(key) for key in keys))
-
-            # Ghi lại danh sách còn lỗi
-            with open(ERROR_FILE, "w") as f:
-                f.write("\n".join(remaining) + ("\n" if remaining else ""))
-
-            if not remaining:
-                print("✅ Tất cả key đã retry thành công.")
-                break
+            await asyncio.gather(*(fetch_and_handle(context, key, sema, lock) for key in keys))
 
         await browser.close()
 

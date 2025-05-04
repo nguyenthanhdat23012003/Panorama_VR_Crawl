@@ -6,7 +6,7 @@ import os
 KEY_FILE = "product-key.txt"
 OUTPUT_FILE = "product-mapping-image-key.txt"
 ERROR_FILE = "error_fetch_image_key.txt"
-MAX_CONCURRENT = 10
+MAX_CONCURRENT = 20
 MAX_RETRY = 3
 CDN_PATTERN = re.compile(r"https?://imgscdn\.ajun720\.cn/(\d+/works/[a-zA-Z0-9]+)")
 

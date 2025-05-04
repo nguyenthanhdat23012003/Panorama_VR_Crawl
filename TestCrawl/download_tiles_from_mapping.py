@@ -91,6 +91,14 @@ for line in mappings:
     with open(success_file, "a") as f:
         f.write(f"{product_key} → {cdn_path}\n")
 
+    # Gỡ dòng đã xử lý khỏi mapping file
+    with open(input_file, "r") as f:
+        remaining = [line for line in f if not line.startswith(f"{product_key},")]
+
+    with open(input_file, "w") as f:
+        f.writelines(remaining)
+
+
 # Cập nhật lại product-mapping-image-key.txt chỉ còn các key chưa xử lý
 with open(input_file, "r") as f:
     original_lines = [line.strip() for line in f if "," in line]

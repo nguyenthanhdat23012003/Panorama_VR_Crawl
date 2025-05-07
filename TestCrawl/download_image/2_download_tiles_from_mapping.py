@@ -1,112 +1,133 @@
-import requests
 import os
-from tqdm import tqdm
+import aiohttp
+import asyncio
 
 FACES = ["f", "b", "l", "r", "u", "d"]
-LEVEL_RANGE = range(1, 6)
-MAX_ROW = 20
-MAX_COL = 20
-TIMEOUT = 2
-MAX_RETRY = 2
-
 BASE_URL = "https://imgscdn.ajun720.cn"
-input_file = "product-mapping-image-key.txt"
-output_dir = "image_crawl"
-error_file = "error_fetch_image.txt"
-success_file = "success_fetch_image.txt"
+OUTPUT_DIR = "image_crawled"
+INPUT_FOLDER = "output_structure"
+MAX_CONCURRENT = 40
+MAX_RETRY = 3
+TIMEOUT = 10
 
-# Tạo file nếu chưa có
-for fpath in [error_file, success_file]:
-    if not os.path.exists(fpath):
-        open(fpath, "w").close()
+sem = asyncio.Semaphore(MAX_CONCURRENT)
+lock = asyncio.Lock()
 
-def download_with_retry(url):
-    for _ in range(MAX_RETRY):
+def parse_structure_from_filename(filename):
+    parts = filename.replace(".txt", "").split("_")
+    levels = []
+    i = 0
+    while i < len(parts):
+        if parts[i].startswith("l") and i + 2 < len(parts):
+            try:
+                lv = int(parts[i][1:])
+                row = int(parts[i + 1])
+                col = int(parts[i + 2])
+                levels.append((lv, row, col))
+                i += 3
+            except ValueError:
+                i += 1
+        else:
+            i += 1
+    return levels
+
+async def fetch(session, url, log_id):
+    for attempt in range(1, MAX_RETRY + 1):
         try:
-            r = requests.get(url, timeout=TIMEOUT)
-            if r.status_code == 200:
-                return r.content
-        except:
-            pass
+            async with session.get(url, timeout=TIMEOUT) as resp:
+                if resp.status == 200:
+                    print(f"[\u2705] ({log_id}) Success: {url}")
+                    return await resp.read()
+                else:
+                    print(f"[\u26a0\ufe0f] ({log_id}) Attempt {attempt}: Status {resp.status}")
+        except Exception as e:
+            print(f"[\u274c] ({log_id}) Attempt {attempt}: {e}")
+        await asyncio.sleep(1)
     return None
 
-# Đọc toàn bộ mapping ban đầu
-with open(input_file, "r") as f:
-    mappings = [line.strip() for line in f if "," in line]
+async def download_images_for_product(session, key, image_path, levels, subfolder_name):
+    folder_path = os.path.join(OUTPUT_DIR, subfolder_name, key)
+    os.makedirs(folder_path, exist_ok=True)
 
-remaining_mappings = []
+    print(f"\n📦 Crawling product: {key} in file {subfolder_name}")
+    preview_url = f"{BASE_URL}/{image_path}/preview.jpg"
+    preview_content = await fetch(session, preview_url, f"{key} - preview")
+    if not preview_content:
+        return False
 
-for line in mappings:
-    product_key, cdn_path = line.split(",", 1)
-    print(f"\n📦 Đang xử lý: {product_key} → {cdn_path}")
-    product_path = os.path.join(output_dir, product_key)
-    os.makedirs(product_path, exist_ok=True)
+    with open(os.path.join(folder_path, "preview.jpg"), "wb") as f:
+        f.write(preview_content)
 
-    # Tải preview
-    preview_url = f"{BASE_URL}/{cdn_path}/preview.jpg"
-    preview_path = os.path.join(product_path, "preview.jpg")
-    content = download_with_retry(preview_url)
+    tasks = []
 
-    if not content:
-        print(f"❌ Không tải được preview → skip {product_key}")
-        with open(error_file, "a") as f:
-            f.write(f"{product_key} → {cdn_path}\n")
-        continue
+    async def download_tile(face, lv, r, c):
+        img_name = f"l{lv}_{face}_{r}_{c}.jpg"
+        url = f"{BASE_URL}/{image_path}/{face}/l{lv}/{r}/{img_name}"
+        content = await fetch(session, url, f"{key} - {img_name}")
+        if not content:
+            return False
+        save_dir = os.path.join(folder_path, face, f"l{lv}", str(r))
+        os.makedirs(save_dir, exist_ok=True)
+        with open(os.path.join(save_dir, img_name), "wb") as f:
+            f.write(content)
+        return True
 
-    with open(preview_path, "wb") as f:
-        f.write(content)
-    print("✔️ preview.jpg")
-
-    # Tải tile
     for face in FACES:
-        for level_num in LEVEL_RANGE:
-            level = f"l{level_num}"
-            test_url = f"{BASE_URL}/{cdn_path}/{face}/{level}/1/{level}_{face}_1_1.jpg"
-            if not download_with_retry(test_url):
-                continue
+        for lv, rows, cols in levels:
+            for r in range(1, rows + 1):
+                for c in range(1, cols + 1):
+                    tasks.append(download_tile(face, lv, r, c))
 
-            print(f"🔎 Bắt đầu tải {face}/{level}")
-            for row in range(1, MAX_ROW + 1):
-                found_in_row = False
-                for col in range(1, MAX_COL + 1):
-                    filename = f"{level}_{face}_{row}_{col}.jpg"
-                    url = f"{BASE_URL}/{cdn_path}/{face}/{level}/{row}/{filename}"
-                    content = download_with_retry(url)
+    results = await asyncio.gather(*tasks)
+    return all(results)
 
-                    if content:
-                        local_dir = os.path.join(product_path, face, level, str(row))
-                        os.makedirs(local_dir, exist_ok=True)
-                        local_path = os.path.join(local_dir, filename)
+async def process_file(filepath):
+    filename = os.path.basename(filepath)
+    levels = parse_structure_from_filename(filename)
+    subfolder_name = filename.replace(".txt", "")
+    print(f"\n📂 Processing file: {filename} with structure {levels}")
 
-                        with open(local_path, "wb") as f:
-                            f.write(content)
-                        tqdm.write(f"✔️ {filename}")
-                        found_in_row = True
-                    else:
-                        break
-                if not found_in_row:
-                    break
+    while True:
+        # Đọc lại file mỗi vòng
+        if not os.path.exists(filepath):
+            break
 
-    # Đánh dấu thành công
-    with open(success_file, "a") as f:
-        f.write(f"{product_key} → {cdn_path}\n")
+        with open(filepath, "r") as f:
+            lines = [line.strip() for line in f if line.strip()]
 
-    # Gỡ dòng đã xử lý khỏi mapping file
-    with open(input_file, "r") as f:
-        remaining = [line for line in f if not line.startswith(f"{product_key},")]
+        if not lines:
+            print(f"\u2705 Hoàn tất file {filename}")
+            break
 
-    with open(input_file, "w") as f:
-        f.writelines(remaining)
+        current_line = lines[0]
+        try:
+            key, path = current_line.split(",", 1)
+        except ValueError:
+            print(f"\u274c Bỏ qua dòng lỗi: {current_line}")
+            lines = lines[1:]
+            with open(filepath, "w") as f:
+                f.write("\n".join(lines) + ("\n" if lines else ""))
+            continue
 
+        async with aiohttp.ClientSession() as session:
+            success = await download_images_for_product(session, key, path, levels, subfolder_name)
 
-# Cập nhật lại product-mapping-image-key.txt chỉ còn các key chưa xử lý
-with open(input_file, "r") as f:
-    original_lines = [line.strip() for line in f if "," in line]
-with open(success_file, "r") as f:
-    done_keys = {line.split(" → ")[0] for line in f}
+        if success:
+            lines = lines[1:]
+            with open(filepath, "w") as f:
+                f.write("\n".join(lines) + ("\n" if lines else ""))
+        else:
+            print(f"⚠️ Product {key} failed. Sẽ được thử lại sau.")
+            await asyncio.sleep(2)
 
-with open(input_file, "w") as f:
-    for line in original_lines:
-        key = line.split(",", 1)[0]
-        if key not in done_keys:
-            f.write(line + "\n")
+async def main():
+    if not os.path.exists(INPUT_FOLDER):
+        print(f"❌ Không tìm thấy thư mục {INPUT_FOLDER}")
+        return
+
+    for fname in sorted(os.listdir(INPUT_FOLDER)):
+        if fname.endswith(".txt"):
+            await process_file(os.path.join(INPUT_FOLDER, fname))
+
+if __name__ == "__main__":
+    asyncio.run(main())

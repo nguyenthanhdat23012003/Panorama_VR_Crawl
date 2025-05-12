@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Project Title</title>
+<meta charset="utf-8">
+<meta name="viewport" content="target-densitydpi=device-dpi, width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, minimal-ui" />
+<style> @-ms-viewport { width: device-width; } </style>
+<link rel="stylesheet" href="vendor/reset.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="single-scene view-control-buttons">
+
+<div id="pano"></div>
+
+<!-- Thêm menu sản phẩm -->
+<div id="productMenu" style="position: absolute; top: 50px; left: 20px; z-index: 10; background-color: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
+  <select id="productSelector" style="padding: 5px; background: #333; color: white; border: 1px solid #555;">
+    <!-- l1_l1_1_1 -->
+    <option value="1a5ab6424adfa1e1">l1_l1_1_1 / 1a5ab6424adfa1e1</option>
+    
+    <!-- l1_l1_2_2 -->
+    <option value="0907ced043a892f4">l1_l1_2_2 / 0907ced043a892f4</option>
+    <option value="116d8fe1d94b004f">l1_l1_2_2 / 116d8fe1d94b004f</option>
+    
+    <!-- l1_l1_3_3 -->
+    <option value="2d9dfc066215f1d0">l1_l1_3_3 / 2d9dfc066215f1d0</option>
+    <option value="961fab550347f6fa">l1_l1_3_3 / 961fab550347f6fa</option>
+    
+    <!-- l2_l1_2_2_l2_3_3 -->
+    <option value="0013bf73ebe076f7">l2_l1_2_2_l2_3_3 / 0013bf73ebe076f7</option>
+    <option value="00334ac8f21d1b5c">l2_l1_2_2_l2_3_3 / 00334ac8f21d1b5c</option>
+    
+    <!-- l2_l1_2_2_l2_4_4 -->
+    <option value="0006e253c720cf00">l2_l1_2_2_l2_4_4 / 0006e253c720cf00</option>
+    <option value="000a87de36f83cca">l2_l1_2_2_l2_4_4 / 000a87de36f83cca</option>
+    
+    <!-- l2_l1_3_3_l2_5_5 -->
+    <option value="04172c95a916ac66">l2_l1_3_3_l2_5_5 / 04172c95a916ac66</option>
+    <option value="05d0fc5832284cff">l2_l1_3_3_l2_5_5 / 05d0fc5832284cff</option>
+    
+    <!-- l3_l1_2_2_l2_3_3_l3_5_5 -->
+    <option value="0016314bd22c88bf">l3_l1_2_2_l2_3_3_l3_5_5 / 0016314bd22c88bf</option>
+    <option value="0020ca9e6b6b5d9d">l3_l1_2_2_l2_3_3_l3_5_5 / 0020ca9e6b6b5d9d</option>
+    
+    <!-- l3_l1_2_2_l2_3_3_l3_7_7 -->
+    <option value="000565a39fc5c236">l3_l1_2_2_l2_3_3_l3_7_7 / 000565a39fc5c236</option>
+    <option value="0027992aa5064f2d">l3_l1_2_2_l2_3_3_l3_7_7 / 0027992aa5064f2d</option>
+    
+    <!-- l3_l1_2_2_l2_4_4_l3_8_8 -->
+    <option value="12708b97708d4808">l3_l1_2_2_l2_4_4_l3_8_8 / 12708b97708d4808</option>
+    <option value="19447476b3764967">l3_l1_2_2_l2_4_4_l3_8_8 / 19447476b3764967</option>
+    
+    <!-- l4_l1_2_2_l2_3_3_l3_5_5_l4_10_10 -->
+    <option value="091ac331c6f2238d">l4_l1_2_2_l2_3_3_l3_5_5_l4_10_10 / 091ac331c6f2238d</option>
+    <option value="1003664e21e92652">l4_l1_2_2_l2_3_3_l3_5_5_l4_10_10 / 1003664e21e92652</option>
+  </select>
+</div>
+
+<div id="sceneList">
+  <ul class="scenes">
+    <!-- Scene list sẽ được tạo động thông qua JavaScript -->
+  </ul>
+</div>
+
+<div id="titleBar">
+  <h1 class="sceneName"></h1>
+</div>
+
+<a href="javascript:void(0)" id="autorotateToggle">
+  <img class="icon off" src="img/play.png">
+  <img class="icon on" src="img/pause.png">
+</a>
+
+<a href="javascript:void(0)" id="fullscreenToggle">
+  <img class="icon off" src="img/fullscreen.png">
+  <img class="icon on" src="img/windowed.png">
+</a>
+
+<a href="javascript:void(0)" id="sceneListToggle">
+  <img class="icon off" src="img/expand.png">
+  <img class="icon on" src="img/collapse.png">
+</a>
+
+<a href="javascript:void(0)" id="viewUp" class="viewControlButton viewControlButton-1">
+  <img class="icon" src="img/up.png">
+</a>
+<a href="javascript:void(0)" id="viewDown" class="viewControlButton viewControlButton-2">
+  <img class="icon" src="img/down.png">
+</a>
+<a href="javascript:void(0)" id="viewLeft" class="viewControlButton viewControlButton-3">
+  <img class="icon" src="img/left.png">
+</a>
+<a href="javascript:void(0)" id="viewRight" class="viewControlButton viewControlButton-4">
+  <img class="icon" src="img/right.png">
+</a>
+<a href="javascript:void(0)" id="viewIn" class="viewControlButton viewControlButton-5">
+  <img class="icon" src="img/plus.png">
+</a>
+<a href="javascript:void(0)" id="viewOut" class="viewControlButton viewControlButton-6">
+  <img class="icon" src="img/minus.png">
+</a>
+
+<script src="vendor/screenfull.min.js" ></script>
+<script src="vendor/bowser.min.js" ></script>
+<script src="vendor/marzipano.js" ></script>
+
+<!-- Tải router.js trước index.js -->
+<script src="router.js"></script>
+<script src="index.js"></script>
+
+</body>
+</html>
